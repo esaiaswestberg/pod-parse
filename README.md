@@ -16,7 +16,7 @@ console.log(`Podcast episodes: ${podcastFeed.episodes.length}`)
 const firstEpisode = podcastFeed.episodes[0]
 console.log(`First episode title: ${firstEpisode.title}`)
 console.log(`First episode description: ${firstEpisode.description}`)
-console.log(`First episode audio: ${firstEpisode.audioUrl}`)
+console.log(`First episode audio: ${firstEpisode.audio.url}`)
 console.log(`First episode image: ${firstEpisode.image.url}`)
 console.log(`First episode duration: ${firstEpisode.duration}`)
 console.log(`First episode published: ${firstEpisode.published}`)

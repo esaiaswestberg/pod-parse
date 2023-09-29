@@ -1,9 +1,9 @@
-import Image from "./Image"
+import Image from './Image'
 
 type PodcastDetails = {
   title: string
   description: string
-  image: Image
+  images: Image[]
 }
 
 export default PodcastDetails

@@ -1,15 +1,14 @@
-import Audio from "./Audio";
-import Duration from "./Duration";
-import Image from "./Image";
+import Audio from './Audio'
+import Image from './Image'
 
 type PodcastEpisode = {
   title: string
   description: string
   published: Date
-  audio: Audio
-  duration: Duration
+  audio: Audio[]
+  duration: number
   guid: string
-  image: Image
+  images: Image[]
 }
 
 export default PodcastEpisode
