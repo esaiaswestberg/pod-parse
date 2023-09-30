@@ -1,5 +1,4 @@
 import xml2js from 'xml2js'
-import { z } from 'zod'
 import Audio from '../types/Audio'
 import Image from '../types/Image'
 import PodcastDetails from '../types/PodcastDetails'
@@ -9,6 +8,13 @@ import PodcastFeed from '../types/PodcastFeed'
 export default class ParseService {
   private static parser = new xml2js.Parser()
 
+  /**
+   * Parses a podcast feed from an XML string.
+   *
+   * @param rssFeedXml Podcast RSS feed as an XML string.
+   * @returns PodcastFeed object.
+   * @throws Error if the XML string is invalid.
+   */
   public static async parseStr(rssFeedXml: string): Promise<PodcastFeed> {
     return new Promise(async (resolve) => {
       const feedObject = await this.parser.parseStringPromise(rssFeedXml)
@@ -52,80 +58,115 @@ export default class ParseService {
   }
 
   private static parsePodcastTitle(feedObject: any): string {
-    const title = feedObject.rss.channel[0].title[0]
-    if (typeof title === 'string') return title
-    return '[NO_TITLE_FOUND]'
+    const title = this.getPathValue(feedObject, ['rss', 'channel', 0, 'title', 0])
+    const itunesTitle = this.getPathValue(feedObject, ['rss', 'channel', 0, 'itunes:title', 0])
+
+    const result = this.getFirstDefinedValueWithType<string>(['string'], title, itunesTitle)
+    return result || '[NO_TITLE_FOUND]'
   }
 
   private static parsePodcastDescription(feedObject: any): string {
-    const description = feedObject.rss.channel[0].description[0]
-    if (typeof description === 'string') return description
-    return '[NO_DESCRIPTION_FOUND]'
+    const description = this.getPathValue(feedObject, ['rss', 'channel', 0, 'description', 0])
+    const itunesSummary = this.getPathValue(feedObject, ['rss', 'channel', 0, 'itunes:summary', 0])
+
+    const result = this.getFirstDefinedValueWithType<string>(['string'], description, itunesSummary)
+    return result || '[NO_DESCRIPTION_FOUND]'
   }
 
   private static parsePodcastImage(feedObject: any): Image[] {
-    const image = feedObject.rss.channel[0].image
-    if (typeof image === 'object' && image.url) return [{ url: image.url }]
+    const imageUrl = this.getPathValue(feedObject, ['rss', 'channel', 0, 'image', 0, 'url', 0])
+    const itunesImage = this.getPathValue(feedObject, ['rss', 'channel', 0, 'itunes:image', 0, '$', 'href'])
 
-    if (Array.isArray(image)) {
-      const images = image.filter((i) => i.url)
-      return images.map((i) => ({ url: i.url }))
-    }
-
-    return [{ url: 'https://placehold.co/400' }]
+    const image = this.getFirstDefinedValueWithType<string>(['string'], imageUrl, itunesImage)
+    return [{ url: image ?? 'https://placehold.co/400' }]
   }
 
   private static parseEpisodeTitle(episodeObject: any): string {
-    const title = episodeObject.title[0]
-    if (typeof title === 'string') return title
-    return '[NO_TITLE_FOUND]'
+    const title = this.getPathValue(episodeObject, ['title', 0])
+    const itunesTitle = this.getPathValue(episodeObject, ['itunes:title', 0])
+
+    const result = this.getFirstDefinedValueWithType<string>(['string'], title, itunesTitle)
+    return result || '[NO_TITLE_FOUND]'
   }
 
   private static parseEpisodeDescription(episodeObject: any): string {
-    const description = episodeObject.description[0]
-    if (typeof description === 'string') return description
-    return '[NO_DESCRIPTION_FOUND]'
+    const description = this.getPathValue(episodeObject, ['description', 0])
+    const itunesSummary = this.getPathValue(episodeObject, ['itunes:summary', 0])
+
+    const result = this.getFirstDefinedValueWithType<string>(['string'], description, itunesSummary)
+    return result || '[NO_DESCRIPTION_FOUND]'
   }
 
   private static parseEpisodeImage(episodeObject: any): Image[] {
-    const image = episodeObject.image
+    const imageUrl = this.getPathValue(episodeObject, ['image', 0, 'url', 0])
+    const itunesImage = this.getPathValue(episodeObject, ['itunes:image', 0, '$', 'href'])
 
-    if (typeof image === 'string') return [{ url: image }]
-    if (typeof image === 'object' && image.url) return [{ url: image.url }]
-
-    if (Array.isArray(image)) {
-      const images = image.filter((i) => i.url)
-      return images.map((i) => ({ url: i.url }))
-    }
+    const image = this.getFirstDefinedValueWithType<string>(['string'], imageUrl, itunesImage)
+    if (image) return [{ url: image }]
 
     return []
   }
 
   private static parseEpisodeAudio(episodeObject: any): Audio[] {
-    return episodeObject.enclosure.map(({ $: audio }) => {
-      if (typeof audio === 'string') return { url: audio }
-      if (typeof audio.url === 'string') return { url: audio.url }
-    })
+    const audioUrl = this.getPathValue(episodeObject, ['enclosure', 0, '$', 'url'])
+
+    const audio = this.getFirstDefinedValueWithType<string>(['string'], audioUrl)
+    if (audio) return [{ url: audio }]
+    return []
   }
 
   private static parseEpisodePublicationDate(episodeObject: any): Date {
-    const date = episodeObject.pubDate[0]
-    if (typeof date === 'string') return new Date(date)
+    const date = this.getPathValue(episodeObject, ['pubDate', 0])
+
+    const result = this.getFirstDefinedValueWithType<string>(['string'], date)
+    if (result) return new Date(result)
 
     return new Date(1970, 1, 1, 0, 0, 0, 0)
   }
 
   private static parseEpisodeDuration(episodeObject: any): number {
-    const itunesDuration = parseFloat(episodeObject['itunes:duration'][0])
-    if (z.number().safeParse(itunesDuration).success) return itunesDuration
+    const duration = this.getPathValue(episodeObject, ['duration', 0])
+    const itunesDuration = this.getPathValue(episodeObject, ['itunes:duration', 0])
+
+    const result = this.getFirstDefinedValueWithType<string>(['string', 'number'], duration, itunesDuration)
+    if (typeof result === 'number') return result
+
+    // HH:MM:SS or MM:SS
+    if (typeof result === 'string') {
+      const parts = result.split(':').reverse()
+      const [seconds, minutes, hours] = parts.map((part) => parseFloat(part))
+
+      return seconds + (minutes ?? 0) * 60 + (hours ?? 0) * 60 * 60
+    }
 
     return 0
   }
 
   private static parseEpisodeGuid(episodeObject: any): string {
-    const guid = episodeObject.guid[0]['_']
-    if (typeof guid === 'string') return guid
+    const guid1 = this.getPathValue(episodeObject, ['guid', 0, '_'])
+    const guid2 = this.getPathValue(episodeObject, ['guid', 0])
 
-    return '[NO_GUID_FOUND]'
+    const result = this.getFirstDefinedValueWithType<string>(['string'], guid1, guid2)
+    return result || '[NO_GUID_FOUND]'
+  }
+
+  private static getPathValue(object: any, path: (string | number)[]): any {
+    let value = object
+    for (const key of path) {
+      if (!value) return undefined
+      value = value[key]
+    }
+
+    return value
+  }
+
+  private static getFirstDefinedValueWithType<T>(types: string[], ...values: any[]): T | undefined {
+    return values.find((value) => {
+      if (!value) return false
+      if (typeof value === 'object') return false
+
+      const type = typeof value
+      return types.includes(type)
+    })
   }
 }
