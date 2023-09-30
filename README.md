@@ -1,6 +1,10 @@
 # Pod-Parse
 
 ```typescript
+// CommonJS
+const { parseStr } = require('pod-parse')
+
+// ESM (Node.js) & TypeScript
 import { parseStr } from 'pod-parse'
 
 const response = await fetch('[...]')
