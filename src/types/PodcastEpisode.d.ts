@@ -1,4 +1,5 @@
 import Audio from './Audio'
+import Duration from './Duration'
 import Image from './Image'
 
 type PodcastEpisode = {
@@ -6,7 +7,7 @@ type PodcastEpisode = {
   description: string
   published: Date
   audio: Audio[]
-  duration: number
+  duration: Duration
   guid: string
   images: Image[]
 }

@@ -1,5 +1,6 @@
 import xml2js from 'xml2js'
 import Audio from '../types/Audio'
+import Duration from '../types/Duration'
 import Image from '../types/Image'
 import PodcastDetails from '../types/PodcastDetails'
 import PodcastEpisode from '../types/PodcastEpisode'
@@ -124,7 +125,7 @@ export default class ParseService {
     return new Date(1970, 1, 1, 0, 0, 0, 0)
   }
 
-  private static parseEpisodeDuration(episodeObject: any): number {
+  private static parseEpisodeDuration(episodeObject: any): Duration {
     const duration = this.getPathValue(episodeObject, ['duration', 0])
     const itunesDuration = this.getPathValue(episodeObject, ['itunes:duration', 0])
 
@@ -136,10 +137,14 @@ export default class ParseService {
       const parts = result.split(':').reverse()
       const [seconds, minutes, hours] = parts.map((part) => parseFloat(part))
 
-      return seconds + (minutes ?? 0) * 60 + (hours ?? 0) * 60 * 60
+      return {
+        totalSeconds: seconds + (minutes ?? 0) * 60 + (hours ?? 0) * 60 * 60
+      }
     }
 
-    return 0
+    return {
+      totalSeconds: 0
+    }
   }
 
   private static parseEpisodeGuid(episodeObject: any): string {
