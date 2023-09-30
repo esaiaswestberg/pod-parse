@@ -34,7 +34,7 @@ export default class ParseService {
     if (!Array.isArray(episodeItems)) return [this.parsePodcastEpisode(episodeItems)]
 
     const episodes = episodeItems.map((item) => this.parsePodcastEpisode(item))
-    episodes.sort((a, b) => b.published.getTime() - a.published.getTime())
+    episodes.sort((a, b) => a.published.getTime() - b.published.getTime())
 
     return episodes
   }
